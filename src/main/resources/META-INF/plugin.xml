@@ -1,0 +1,51 @@
+<idea-plugin>
+    <id>me.alvin.learn_gradle_plugin</id>
+    <name>plugin_for_learn</name>
+    <vendor email="lxlx1991@gmail.com" url="">Alvin</vendor>
+
+    <description><![CDATA[
+    learn to write a plugin for extract class meta from xml <br>
+    ]]></description>
+    <idea-version since-build="2021.2" until-build="2021.3"/>
+
+    <!-- please see https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Add your extensions here -->
+        <dom.fileMetaData implementation="me.alvin.learn.domain.xml.DagGraphDomFileDescription" rootTagName="DagGraph"/>
+        <fileEditorProvider implementation="me.alvin.learn.editor.DagXmlMetaJsonEditorProvider"/>
+        <fileEditorProvider implementation="me.alvin.learn.editor.ActionClassMetaJsonEditorProvider"/>
+
+        <projectService serviceInterface="me.alvin.learn.service.MetaJsonTempFileCacheService"
+                        serviceImplementation="me.alvin.learn.service.impl.MetaJsonTempFileCacheServiceImpl" />
+    </extensions>
+
+    <actions>
+        <!-- Add your actions here -->
+        <action id="XmlExtract" class="me.alvin.learn.action.XmlExtractAction"
+                text="Xml Meta Extract Action" description="Extract class meta from xml file">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+
+        <action id="XmlExtractLearn" class="me.alvin.learn.action.XmlExtractLearnAction"
+                text="Learn Xml Meta Extract Action" description="Extract class meta from xml file">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+
+        <action id="XmlExtractDag" class="me.alvin.learn.action.XmlExtractDagAction"
+                text="Xml Meta Extract Dag Action" description="Extract class meta from xml file">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+        <action id="showActionMeta" class="me.alvin.learn.action.ShowActionMetaAction"
+                text="Show Action Meta" description="Show action meta in json">
+            <add-to-group group-id="EditorPopupMenu" anchor="first"/>
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>

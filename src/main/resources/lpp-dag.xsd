@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified" attributeFormDefault="unqualified">
+
+    <xs:element name="DagGraph">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="id" type="xs:string" minOccurs="0"/>
+                <xs:element ref="duration" minOccurs="0"/>
+                <xs:element ref="config" minOccurs="0"/>
+                <xs:element ref="units"/>
+                <xs:element ref="stages"/>
+            </xs:all>
+            <xs:attribute name="id" type="xs:string"/>
+            <xs:attribute ref="duration"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="duration">
+        <xs:simpleType>
+            <xs:restriction base="xs:long">
+                <xs:minInclusive value="0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <xs:attribute name="duration">
+        <xs:simpleType>
+            <xs:restriction base="xs:long">
+                <xs:minInclusive value="0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:element name="config">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="threadPool" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="units">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="unit" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="stages">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="stage" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="unit">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="id" type="xs:string">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:minLength value="1"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="clz" type="xs:string">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:minLength value="1"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="description" type="xs:string" nillable="true" minOccurs="0"/>
+                <xs:element name="dicts" type="xs:string" nillable="true" minOccurs="0"/>
+                <xs:element name="context" nillable="true" minOccurs="0"/>
+                <xs:element ref="duration" minOccurs="0"/>
+                <xs:element name="condition" type="xs:string" nillable="true" minOccurs="0"/>
+                <xs:element ref="configMap" minOccurs="0"/>
+                <xs:element ref="expcondition" minOccurs="0"/>
+            </xs:all>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="expcondition" nillable="true">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="mcckey" type="xs:string">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:minLength value="1"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+                <xs:element name="expflag" type="xs:string">
+                    <xs:simpleType>
+                        <xs:restriction base="xs:string">
+                            <xs:minLength value="1"/>
+                        </xs:restriction>
+                    </xs:simpleType>
+                </xs:element>
+            </xs:all>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="configMap" nillable="true">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="property" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="property">
+        <xs:complexType>
+            <xs:attribute name="key" type="xs:string"/>
+            <xs:attribute name="value" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="stage">
+        <xs:complexType>
+            <xs:all>
+                <xs:element ref="flows"/>
+                <xs:element ref="depends" minOccurs="0"/>
+            </xs:all>
+            <xs:attribute name="id" type="xs:string" use="required">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:minLength value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute ref="duration"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="flows">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="flow" maxOccurs="unbounded"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="flow">
+        <xs:complexType>
+            <xs:attribute name="from" type="xs:string">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:minLength value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+            <xs:attribute name="to" type="xs:string" default=""/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="depends">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="depend"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="depend">
+        <xs:complexType>
+            <xs:attribute name="id" type="xs:string">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:minLength value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="threadPool">
+        <xs:complexType>
+            <xs:all>
+                <xs:element name="coreSize" type="xs:int"/>
+                <xs:element name="maxSize" type="xs:int"/>
+                <xs:element name="queueSize" type="xs:int"/>
+                <xs:element name="scheduledSize" type="xs:int"/>
+
+            </xs:all>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>
