@@ -10,6 +10,6 @@ import com.intellij.util.xml.DomFileDescription;
 public class DagGraphDomFileDescription extends DomFileDescription<DagGraph> {
 
     public DagGraphDomFileDescription() {
-        super(DagGraph.class, "DagGraph", "http://adapi.waimai.dev.meituan.com/api/search/lpp-dag.xsd");
+        super(DagGraph.class, "DagGraph", "http://xxx.xsd");
     }
 }

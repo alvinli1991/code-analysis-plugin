@@ -12,17 +12,25 @@ import com.intellij.psi.search.searches.ReferencesSearch;
 import com.intellij.psi.util.PsiTreeUtil;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.util.Query;
+import com.intellij.util.xml.DomFileElement;
 import com.intellij.util.xml.DomManager;
 import me.alvin.learn.domain.DagActionClassMeta;
 import me.alvin.learn.domain.DependService;
+import me.alvin.learn.domain.context.ClassFactory;
+import me.alvin.learn.domain.dag.Action;
+import me.alvin.learn.domain.dag.Dag;
+import me.alvin.learn.domain.dag.Stage;
 import me.alvin.learn.domain.xml.DagGraph;
+import me.alvin.learn.domain.xml.Depends;
 import me.alvin.learn.domain.xml.Unit;
 import me.alvin.learn.utils.JacksonUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -126,6 +134,104 @@ public class XmlExtractAction extends AnAction {
                             metaClass.setDependServices(dependServices);
                         });
         System.out.println(JacksonUtils.toJson(classMetas));
+    }
+
+    //TODO
+    public void test(AnActionEvent event) {
+        Project project = event.getProject();
+        if (Objects.isNull(project)) {
+            return;
+        }
+        final GlobalSearchScope allScope = GlobalSearchScope.allScope(project);
+
+        //init
+        ClassFactory.setObjectClass(JavaPsiFacade.getInstance(project).findClass("java.lang.Object", allScope));
+
+        //读取dag xml file
+        DomManager domManager = DomManager.getDomManager(project);
+        PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
+        XmlFile xmlFile = (XmlFile) psiFile;
+        DomFileElement<DagGraph> xmlFileElement = domManager.getFileElement(xmlFile, DagGraph.class);
+        if (Objects.isNull(xmlFileElement)) {
+            return;
+        }
+        DagGraph dagGraph = xmlFileElement.getRootElement();
+
+        Dag dagContext = new Dag(xmlFile.getName());
+
+        //解析action元数据
+        List<Unit> units = dagGraph.getUnits().getUnits();
+        if (CollectionUtils.isEmpty(units)) {
+            return;
+        }
+
+        Set<Action> actions = units.stream().map(unit -> {
+            String fullClassName = unit.getClz().getValue();
+            String description = unit.getDescription().getValue();
+            String id = unit.getId().getValue();
+            PsiClass theClass = JavaPsiFacade.getInstance(project).findClass(fullClassName, allScope);
+
+            Action theAction = new Action(id);
+            theAction.setDescription(description);
+            theAction.setActionClassMeta(ClassFactory.getClassMeta(theClass).orElse(null));
+
+            //解析input、output
+            theAction.setInputs(null);
+            theAction.setOutputs(null);
+            return theAction;
+        }).collect(Collectors.toSet());
+        dagContext.setActions(actions);
+        if (CollectionUtils.isEmpty(actions)) {
+            return;
+        }
+
+
+        //解析stage
+        List<me.alvin.learn.domain.xml.Stage> xmlStages = dagGraph.getStages().getStages();
+        if (CollectionUtils.isEmpty(xmlStages)) {
+            return;
+        }
+
+        Set<Stage> stages = xmlStages.stream()
+                .map(stage -> {
+                    String stageId = stage.getStageId().getValue();
+                    Stage theStage = new Stage(stageId);
+
+                    // 解析action的关系
+                    stage.getFlows().getFlows().forEach(flow -> {
+                        Action fromAction = dagContext.getActionMeta(flow.getFrom().getValue()).orElse(null);
+                        Action toAction = dagContext.getActionMeta(flow.getTo().getValue()).orElse(null);
+                        if (Objects.nonNull(fromAction) && Objects.nonNull(toAction)) {
+                            dagContext.addDependency(fromAction, toAction);
+                            theStage.addActionRelation(fromAction, toAction);
+                        }
+                    });
+
+                    return theStage;
+                })
+                .map(stage -> stage.finishBuild(dagContext.getActionDag()))
+                .collect(Collectors.toSet());
+        dagContext.setStages(stages);
+        if (CollectionUtils.isEmpty(stages)) {
+            return;
+        }
+
+
+        //解析stage的关系
+        xmlStages.forEach(stage -> {
+            Depends depends = stage.getDepends();
+            if (Objects.nonNull(depends)) {
+                Stage toStage = dagContext.getStageMeta(stage.getStageId().getValue()).orElse(null);
+                List<Stage> fromStages = depends.getDepends().stream()
+                        .map(depend -> dagContext.getStageMeta(depend.getDependId().getValue()).orElse(null))
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+                if (Objects.nonNull(toStage)) {
+                    fromStages.forEach(fromStage -> dagContext.addDependency(fromStage, toStage));
+                }
+            }
+        });
+
     }
 
     @Override

@@ -1,25 +1,27 @@
 package me.alvin.learn.action;
 
+import com.intellij.lang.java.JavaLanguage;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocToken;
-import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.util.PsiTreeUtil;
-import me.alvin.learn.domain.context.ClassFactory;
-import me.alvin.learn.domain.dag.Action;
-import me.alvin.learn.domain.dag.Input;
-import me.alvin.learn.utils.ActionUtils;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import me.alvin.learn.ui.toolWindow.ClassFieldInfoMdWindowFactory;
+import net.steppschuh.markdowngenerator.table.Table;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -27,25 +29,24 @@ import static me.alvin.learn.utils.MyPsiUtil.EXCLUDE_FIELD_DATA_TYPE_PKG_PREFIX;
 
 /**
  * @author: Li Xiang
- * Date: 2021/12/28
- * Time: 11:13 AM
+ * Date: 2022/1/6
+ * Time: 5:27 PM
  */
-public class ActionAnalysisAction extends AnAction {
-    private static final Logger LOGGER = Logger.getInstance(ActionAnalysisAction.class);
-
+public class ClassFieldInfoToMarkdownAction extends AnAction {
     @Override
     public void actionPerformed(@NotNull AnActionEvent event) {
         Project project = event.getProject();
-        final GlobalSearchScope allScope = GlobalSearchScope.allScope(project);
-        Action theAction = new Action("test");
-        PsiClass theClass = JavaPsiFacade.getInstance(project).findClass("me.alvin.test.TestAction", allScope);
-        theAction.setActionClassMeta(ClassFactory.getClassMeta(theClass).orElse(null));
+        if (null == project) {
+            return;
+        }
+        List<PsiClass> clzs = DumbService.getInstance(project).runReadActionInSmartMode(() -> {
+            PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
+            return Stream.of(((PsiJavaFile) psiFile).getClasses())
+                    .collect(Collectors.toList());
+        });
 
-        PsiField[] psiFields = theClass.getFields();
-        PsiMethod[] psiMethods = theClass.getMethods();
-
-        //TODO holder
-        Stream.of(psiFields)
+        List<FieldInfo> fieldInfos = clzs.stream()
+                .flatMap(clz -> Arrays.stream(clz.getAllFields()))
                 .filter(field -> {
                     PsiClass containingClass = field.getContainingClass();
                     if (containingClass != null) {
@@ -61,7 +62,7 @@ public class ActionAnalysisAction extends AnAction {
                     return true;
                 })
                 .map(field -> {
-                    ClassFieldInfoToMarkdownAction.FieldInfo.FieldInfoBuilder fieldBuilder = ClassFieldInfoToMarkdownAction.FieldInfo.builder();
+                    FieldInfo.FieldInfoBuilder fieldBuilder = FieldInfo.builder();
                     fieldBuilder.fieldName(field.getName())
                             .dataType(field.getType().getPresentableText());
                     String comment = "";
@@ -103,34 +104,39 @@ public class ActionAnalysisAction extends AnAction {
                     return fieldBuilder.build();
                 }).collect(Collectors.toList());
 
-        //TODO 解析出此Action的input
+        Table.Builder tableBuilder = new Table.Builder().withAlignments(Table.ALIGN_LEFT, Table.ALIGN_LEFT, Table.ALIGN_LEFT)
+                .addRow("field", "type", "comment");
+        fieldInfos.forEach(fieldInfo -> {
+            tableBuilder.addRow(fieldInfo.getFieldName(), fieldInfo.getDataType(), fieldInfo.getComment());
+        });
+        String mdContent = tableBuilder.build().toString();
 
-        //TODO 解析出这些input的引用
+        ClassFieldInfoMdWindowFactory.ProjectService projectService = project.getService(ClassFieldInfoMdWindowFactory.ProjectService.class);
+        projectService.getFieldInfoWindow().showToolWindow();
+        projectService.getFieldInfoWindow().refreshFieldInfoMd(mdContent);
 
-
+//        JBTextArea myTextArea = new JBTextArea(mdContent);
+//        JComponent myPanel = new JPanel();
+//        myPanel.add(myTextArea);
+//        JBPopupFactory.getInstance().createComponentPopupBuilder(myPanel, myTextArea).createPopup().showInBestPositionFor(event.getData(PlatformDataKeys.EDITOR));
     }
 
     @Override
     public void update(@NotNull AnActionEvent event) {
-        event.getPresentation().setEnabledAndVisible(false);
+        super.update(event);
+        Project project = event.getProject();
+        PsiFile psiFile = event.getData(CommonDataKeys.PSI_FILE);
+        boolean isEnable = project != null && psiFile != null && (psiFile.getLanguage().is(JavaLanguage.INSTANCE));
+        event.getPresentation().setEnabledAndVisible(isEnable);
     }
 
-    public Set<Input> extractInputFromAction(Action action, Project project) {
-        JavaPsiFacade javaPsiFacade = JavaPsiFacade.getInstance(project);
-
-        PsiClass theClass = action.getActionClassMeta().getPsiClass();
-        PsiFile containingFile = theClass.getContainingFile();
-        FileViewProvider fileViewProvider = containingFile.getViewProvider();
-        Document document = fileViewProvider.getDocument();
-
-        //静态常量入参入口
-        Set<Input> constantInputs = ActionUtils.parseConstantInputForActionClass(theClass, document, javaPsiFacade);
-
-        //函数context入参入口
-
-        //注入bean入口
-
-
-        return null;
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    static class FieldInfo {
+        private String fieldName;
+        private String dataType;
+        private String comment;
     }
 }

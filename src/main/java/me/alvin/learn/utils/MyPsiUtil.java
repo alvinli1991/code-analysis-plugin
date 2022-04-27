@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  */
 public class MyPsiUtil {
     private static final Logger LOGGER = Logger.getInstance(MyPsiUtil.class);
-    private static final Set<String> EXCLUDE_FIELD_DATA_TYPE_PKG_PREFIX = new HashSet<>();
+    public static final Set<String> EXCLUDE_FIELD_DATA_TYPE_PKG_PREFIX = new HashSet<>();
 
     static{
         EXCLUDE_FIELD_DATA_TYPE_PKG_PREFIX.add("java");

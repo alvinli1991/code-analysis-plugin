@@ -12,7 +12,6 @@ import me.alvin.base.MyJavaCodePsiParseTestCase;
  * Date: 2021/12/28
  * Time: 7:45 PM
  */
-@TestDataPath(value = "$CONTENT_ROOT/testData/me/alvin/test")
 public class ActionUtilsTest extends MyJavaCodePsiParseTestCase {
 
     public void testParseInputForConstant() {
